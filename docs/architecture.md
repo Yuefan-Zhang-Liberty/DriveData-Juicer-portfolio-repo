@@ -69,6 +69,9 @@ Gold 样本字段至少包含：视频路径、天气、时间、自车动作、
 - Docker 相关交付物（阶段 8）推迟决策，届时评估 rootless Docker / podman。
 - `data-juicer/` fork 作为本仓库内的独立 git 子目录（未用 submodule，避免流程复杂化），已加入 `.gitignore`。
 - Iceberg 使用 Hadoop catalog（纯文件系统，无 Hive metastore 进程）—— 无 sudo 环境下无法部署 metastore，且本项目单机运行不需要多引擎共享元数据的场景，Hadoop catalog 已足够展示 snapshot/time travel/schema evolution/partition evolution 等核心机制。见 [benchmarks/reports/iceberg_week2.md](../benchmarks/reports/iceberg_week2.md)。
+- Data-Juicer manifest 中的相对视频路径按 `dataset_path` **所在目录**（即 manifest 文件自身的目录）解析，不是项目根目录或 cwd（`data-juicer/data_juicer/format/formatter.py`）—— `export_gold_manifest.py` 按此约定写相对路径。
+- `av` 必须锁定在 `13.1.0`（与 `data-juicer/pyproject.toml` 自身的锁定版本一致），不能装最新版：更新版本会破坏 `mm_utils.py` 里 `close_video()` 用到的 `VideoCodecContext.close()` API。
+- 本机（共享、224 核、多用户训练服务器）上运行 `dj-process` 需要显式设置环境变量 `MP_START_METHOD=fork`。原因：Data-Juicer 对注册在 `UNFORKABLE`（如 `video_motion_score_filter`，用了 cv2）里的算子会强制使用 `forkserver`/`spawn` 起多进程，但这两种方式在本机上都会触发 `multiprocessing.context.AuthenticationError: digest sent was rejected`（推测是与其他用户并发的多进程作业争抢 socket/semaphore 导致，未完全定位，仅做了充分的经验验证）；而普通 `fork` 在本机上对所有算子都稳定可用。已给 `data-juicer/` fork 的 `data_juicer/utils/process_utils.py` 打了一个最小、可选启用的 patch：只有显式设置 `MP_START_METHOD` 时才覆盖 Data-Juicer 强制指定的候选启动方式列表，不设置该环境变量时行为不变。见 [benchmarks/reports/dj_week3.md](../benchmarks/reports/dj_week3.md)。
 
 ## 未决问题
 

@@ -1,0 +1,36 @@
+# Phase 3: local Data-Juicer pipeline over Gold-layer front-camera clips.
+# One-command run: MP_START_METHOD=fork dj-process --config data_juicer/process_local.yaml
+#
+# MP_START_METHOD=fork is required on this host: video_motion_score_filter is
+# registered UNFORKABLE (it uses cv2), which makes Data-Juicer force the
+# forkserver/spawn multiprocessing start method instead of fork -- both are
+# broken on this shared multi-user server (multiprocessing.context.
+# AuthenticationError). See docs/architecture.md and benchmarks/reports/dj_week3.md.
+project_name: 'drivedata-juicer-phase3'
+dataset_path: './data_juicer/manifests/gold_manifest_500.jsonl'
+export_path: './data_juicer/outputs/phase3/result.jsonl'
+work_dir: './data_juicer/work_dir/phase3'
+
+open_tracer: true        # writes before/after sample-diff files under <work_dir>/trace/
+trace_num: 5
+# skip_op_error defaults to true project-wide -- a corrupted video is dropped
+# and logged, not a job-crashing exception (see benchmarks/reports/dj_week3.md).
+
+process:
+  - video_duration_filter:
+      min_duration: 1
+      max_duration: 5
+  - video_aspect_ratio_filter:
+      min_ratio: "1/2"
+      max_ratio: "2/1"
+      any_or_all: any
+  - video_resolution_filter:
+      min_width: 800
+      max_width: 4096
+      min_height: 400
+      max_height: 4096
+      any_or_all: any
+  - video_motion_score_filter:
+      min_score: 0.25
+      sampling_fps: 2
+      any_or_all: any

@@ -6,7 +6,7 @@
 
 ## 状态
 
-项目处于**阶段 2（Iceberg Bronze-Silver-Gold 数仓）**，2026-08-24 启动，阶段 0/1/2 已完成：
+项目处于**阶段 3（Data-Juicer 本地 Pipeline）**，2026-08-24 启动，阶段 0/1/2/3 已完成：
 
 - [x] 仓库骨架与目录结构
 - [x] 环境安装步骤验证
@@ -15,7 +15,7 @@
 - [x] Spark：11 张 nuScenes 元数据表显式 Schema 摄取为 Bronze Parquet
 - [x] Spark：10 个业务 SQL 查询（含窗口函数、四元数角度计算）+ 4 组性能对比实验
 - [x] Spark/Iceberg Bronze-Silver-Gold 数仓（Iceberg 部分）
-- [ ] Data-Juicer 本地/Ray Pipeline
+- [x] Data-Juicer 本地 Pipeline（Gold Manifest 导出、4 个现有视频算子、20/100/500 三档规模、坏视频跳过、可复现性验证）
 - [ ] `video_camera_motion_consistency_filter` 算子与上游 PR
 - [ ] VLM LoRA/SFT 微调与数据质量归因实验
 
@@ -29,6 +29,12 @@ Phase 2 产出见 [benchmarks/reports/iceberg_week2.md](benchmarks/reports/icebe
 [benchmarks/reports/iceberg_week2_experiments.md](benchmarks/reports/iceberg_week2_experiments.md)（实验原始输出）。
 Gold 层 5 张表中仅 2 张（`gold_long_tail_scene`、`gold_evaluation_slice`）已实现，其余 3 张依赖 Phase 3/4
 才会产生的视频片段与质量分数，已在报告中明确标注为延后。
+
+Phase 3 产出见 [benchmarks/reports/dj_week3.md](benchmarks/reports/dj_week3.md)（20/100/500 三档规模的逐算子
+留存率与耗时、坏视频跳过证据、两次独立运行输出逐字节一致的可复现性验证）。Gold 层 Manifest 由
+`data_juicer/export_gold_manifest.py` 生成：nuScenes mini 仅 10 个场景，通过对每个场景的 CAM_FRONT 帧序列做
+滑动窗口（24 帧窗口、4 帧步长、~83% 重叠）拼出 534 个有重叠的片段以覆盖 500 档规模，报告中明确说明这不是
+534 段独立录制的视频。
 
 进度以 [plan.md](plan.md) 中各阶段的完成门槛为准。
 

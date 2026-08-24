@@ -16,6 +16,8 @@ __pycache__/
 *.tgz
 *.ckpt
 *.safetensors
+/data_juicer/work_dir/
+/data_juicer/outputs/
 
 # local env / secrets
 .env
