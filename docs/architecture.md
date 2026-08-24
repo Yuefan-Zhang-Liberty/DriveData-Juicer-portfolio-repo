@@ -68,6 +68,7 @@ Gold 样本字段至少包含：视频路径、天气、时间、自车动作、
 - Java 11 + Spark 3.3.3（`/opt/spark`，系统已装）保留使用，未升级到 plan.md 建议的 Java 17 —— Iceberg 官方 Spark Runtime 对 Spark 3.3 有对应版本，不强制 Java 17。
 - Docker 相关交付物（阶段 8）推迟决策，届时评估 rootless Docker / podman。
 - `data-juicer/` fork 作为本仓库内的独立 git 子目录（未用 submodule，避免流程复杂化），已加入 `.gitignore`。
+- Iceberg 使用 Hadoop catalog（纯文件系统，无 Hive metastore 进程）—— 无 sudo 环境下无法部署 metastore，且本项目单机运行不需要多引擎共享元数据的场景，Hadoop catalog 已足够展示 snapshot/time travel/schema evolution/partition evolution 等核心机制。见 [benchmarks/reports/iceberg_week2.md](../benchmarks/reports/iceberg_week2.md)。
 
 ## 未决问题
 

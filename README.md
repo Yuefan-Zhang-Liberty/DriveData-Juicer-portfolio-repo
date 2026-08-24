@@ -6,7 +6,7 @@
 
 ## 状态
 
-项目处于**阶段 1（Spark SQL over nuScenes metadata）**，2026-08-24 启动，阶段 0/1 已完成：
+项目处于**阶段 2（Iceberg Bronze-Silver-Gold 数仓）**，2026-08-24 启动，阶段 0/1/2 已完成：
 
 - [x] 仓库骨架与目录结构
 - [x] 环境安装步骤验证
@@ -14,7 +14,7 @@
 - [x] Data-Juicer fork 与上游 PR 分支
 - [x] Spark：11 张 nuScenes 元数据表显式 Schema 摄取为 Bronze Parquet
 - [x] Spark：10 个业务 SQL 查询（含窗口函数、四元数角度计算）+ 4 组性能对比实验
-- [ ] Spark/Iceberg Bronze-Silver-Gold 数仓（Iceberg 部分）
+- [x] Spark/Iceberg Bronze-Silver-Gold 数仓（Iceberg 部分）
 - [ ] Data-Juicer 本地/Ray Pipeline
 - [ ] `video_camera_motion_consistency_filter` 算子与上游 PR
 - [ ] VLM LoRA/SFT 微调与数据质量归因实验
@@ -23,6 +23,12 @@ Phase 1 产出见 [benchmarks/reports/spark_week1.md](benchmarks/reports/spark_w
 [benchmarks/reports/spark_week1_perf.md](benchmarks/reports/spark_week1_perf.md)（性能实验+解读）、
 [benchmarks/reports/spark_week1_explain.md](benchmarks/reports/spark_week1_explain.md)（逻辑/物理执行计划，
 因无浏览器环境用 `EXPLAIN` 文本替代 Spark UI 截图）。
+
+Phase 2 产出见 [benchmarks/reports/iceberg_week2.md](benchmarks/reports/iceberg_week2.md)（Bronze/Silver/Gold
+表清单、8 项数据质量检查结果、5 个 Iceberg 机制实验、Iceberg vs. Parquet/数据库/Hive Table 对比），
+[benchmarks/reports/iceberg_week2_experiments.md](benchmarks/reports/iceberg_week2_experiments.md)（实验原始输出）。
+Gold 层 5 张表中仅 2 张（`gold_long_tail_scene`、`gold_evaluation_slice`）已实现，其余 3 张依赖 Phase 3/4
+才会产生的视频片段与质量分数，已在报告中明确标注为延后。
 
 进度以 [plan.md](plan.md) 中各阶段的完成门槛为准。
 
