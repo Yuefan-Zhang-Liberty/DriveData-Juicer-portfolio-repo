@@ -6,16 +6,23 @@
 
 ## 状态
 
-项目处于**阶段 0（项目初始化）**，2026-08-24 启动。当前已完成：
+项目处于**阶段 1（Spark SQL over nuScenes metadata）**，2026-08-24 启动，阶段 0/1 已完成：
 
 - [x] 仓库骨架与目录结构
-- [ ] 环境安装步骤验证
-- [ ] nuScenes mini 下载
-- [ ] Data-Juicer fork 与上游 PR 分支
-- [ ] Spark/Iceberg Bronze-Silver-Gold 数仓
+- [x] 环境安装步骤验证
+- [x] nuScenes mini 下载
+- [x] Data-Juicer fork 与上游 PR 分支
+- [x] Spark：11 张 nuScenes 元数据表显式 Schema 摄取为 Bronze Parquet
+- [x] Spark：10 个业务 SQL 查询（含窗口函数、四元数角度计算）+ 4 组性能对比实验
+- [ ] Spark/Iceberg Bronze-Silver-Gold 数仓（Iceberg 部分）
 - [ ] Data-Juicer 本地/Ray Pipeline
 - [ ] `video_camera_motion_consistency_filter` 算子与上游 PR
 - [ ] VLM LoRA/SFT 微调与数据质量归因实验
+
+Phase 1 产出见 [benchmarks/reports/spark_week1.md](benchmarks/reports/spark_week1.md)（查询结果）、
+[benchmarks/reports/spark_week1_perf.md](benchmarks/reports/spark_week1_perf.md)（性能实验+解读）、
+[benchmarks/reports/spark_week1_explain.md](benchmarks/reports/spark_week1_explain.md)（逻辑/物理执行计划，
+因无浏览器环境用 `EXPLAIN` 文本替代 Spark UI 截图）。
 
 进度以 [plan.md](plan.md) 中各阶段的完成门槛为准。
 
