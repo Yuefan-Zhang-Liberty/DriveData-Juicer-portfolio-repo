@@ -1,0 +1,27 @@
+# upstream fork clone lives inside this repo but is tracked separately
+/data-juicer/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# data & artifacts (never commit datasets or model weights)
+/data/
+/warehouse/
+/logs/
+*.mp4
+*.tgz
+*.ckpt
+*.safetensors
+
+# local env / secrets
+.env
+*.pem
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/

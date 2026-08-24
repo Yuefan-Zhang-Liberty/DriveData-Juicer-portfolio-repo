@@ -1,0 +1,83 @@
+# DriveData-Juicer
+
+基于 Spark、Iceberg、Data-Juicer、Ray 与 VLM 的自动驾驶多模态数据质量闭环。
+
+完整执行计划见 [plan.md](plan.md)。
+
+## 状态
+
+项目处于**阶段 0（项目初始化）**，2026-08-24 启动。当前已完成：
+
+- [x] 仓库骨架与目录结构
+- [ ] 环境安装步骤验证
+- [ ] nuScenes mini 下载
+- [ ] Data-Juicer fork 与上游 PR 分支
+- [ ] Spark/Iceberg Bronze-Silver-Gold 数仓
+- [ ] Data-Juicer 本地/Ray Pipeline
+- [ ] `video_camera_motion_consistency_filter` 算子与上游 PR
+- [ ] VLM LoRA/SFT 微调与数据质量归因实验
+
+进度以 [plan.md](plan.md) 中各阶段的完成门槛为准。
+
+## 架构
+
+见 [docs/architecture.md](docs/architecture.md)。
+
+## 环境
+
+开发机为共享训练服务器（224 核 / 999GB 内存 / RTX 4090 24GB，NFS 存储），无 sudo 权限。相较 plan.md 中的推荐环境，做了以下调整：
+
+- 使用已有的 OpenJDK 11 + Spark 3.3.3（`/opt/spark`），未安装 Java 17 —— Iceberg Spark Runtime 对 Spark 3.3 有官方支持，不强制要求 Java 17。
+- Docker 暂缓：无 sudo 无法安装 Docker daemon，阶段 8 再评估 rootless Docker / podman 方案。
+- Python 环境用 `uv` 管理，`uv venv --python 3.11` 由 uv 自行下载解释器，不依赖系统包管理器。
+
+### 快速开始（逐步补充）
+
+```bash
+# Data-Juicer 开发环境（fork 后的 data-juicer/ 子目录中）
+cd data-juicer
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[generic]"
+uv pip install -e ".[dev]"
+uv pip install pre-commit
+pre-commit install
+```
+
+## 目录结构
+
+```text
+DriveData-Juicer/
+├── README.md
+├── plan.md
+├── docker/
+├── configs/
+├── spark/
+│   ├── ingest_nuscenes.py
+│   ├── build_bronze.py
+│   ├── build_silver.py
+│   ├── build_gold.py
+│   └── sql/
+├── iceberg/
+├── nuscenes/
+│   ├── build_video_clips.py
+│   ├── project_3d_boxes.py
+│   ├── build_dynamic_masks.py
+│   └── inject_corruptions.py
+├── data_juicer/
+│   ├── custom_ops/
+│   ├── process_local.yaml
+│   └── process_ray.yaml
+├── training/
+├── serving/
+├── benchmarks/
+├── tests/
+├── docs/
+├── scripts/
+├── logs/            # 实验日志，不进版本控制
+└── data-juicer/     # Data-Juicer fork（独立 git 仓库，见 .gitignore）
+```
+
+## 数据许可
+
+nuScenes 数据集受其自身许可协议约束，不会提交到本仓库；本仓库只包含处理代码、配置和不含原始数据的实验结果。
