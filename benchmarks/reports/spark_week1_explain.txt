@@ -1,0 +1,110 @@
+== Parsed Logical Plan ==
+'Sort ['avg_pedestrians_per_sample DESC NULLS LAST], true
++- 'Aggregate ['sc.name], ['sc.name AS scene_name#128, 'COUNT(distinct 's.token) AS sample_count#129, 'COUNT('sa.token) AS pedestrian_annotation_count#130, 'ROUND(('COUNT('sa.token) / 'COUNT(distinct 's.token)), 3) AS avg_pedestrians_per_sample#131]
+   +- 'Filter 'c.name LIKE human.pedestrian%
+      +- 'Join Inner, ('c.token = 'i.category_token)
+         :- 'Join Inner, ('i.token = 'sa.instance_token)
+         :  :- 'Join Inner, ('sa.sample_token = 's.token)
+         :  :  :- 'Join Inner, ('s.scene_token = 'sc.token)
+         :  :  :  :- 'SubqueryAlias sc
+         :  :  :  :  +- 'UnresolvedRelation [scene], [], false
+         :  :  :  +- 'SubqueryAlias s
+         :  :  :     +- 'UnresolvedRelation [sample], [], false
+         :  :  +- 'SubqueryAlias sa
+         :  :     +- 'UnresolvedRelation [sample_annotation], [], false
+         :  +- 'SubqueryAlias i
+         :     +- 'UnresolvedRelation [instance], [], false
+         +- 'SubqueryAlias c
+            +- 'UnresolvedRelation [category], [], false
+
+== Analyzed Logical Plan ==
+scene_name: string, sample_count: bigint, pedestrian_annotation_count: bigint, avg_pedestrians_per_sample: double
+Sort [avg_pedestrians_per_sample#131 DESC NULLS LAST], true
++- Aggregate [name#5], [name#5 AS scene_name#128, count(distinct token#14) AS sample_count#129L, count(token#66) AS pedestrian_annotation_count#130L, round((cast(count(token#66) as double) / cast(count(distinct token#14) as double)), 3) AS avg_pedestrians_per_sample#131]
+   +- Filter name#91 LIKE human.pedestrian%
+      +- Join Inner, (token#90 = category_token#113)
+         :- Join Inner, (token#112 = instance_token#68)
+         :  :- Join Inner, (sample_token#67 = token#14)
+         :  :  :- Join Inner, (scene_token#18 = token#0)
+         :  :  :  :- SubqueryAlias sc
+         :  :  :  :  +- SubqueryAlias scene
+         :  :  :  :     +- View (`scene`, [token#0,log_token#1,nbr_samples#2,first_sample_token#3,last_sample_token#4,name#5,description#6])
+         :  :  :  :        +- Relation [token#0,log_token#1,nbr_samples#2,first_sample_token#3,last_sample_token#4,name#5,description#6] parquet
+         :  :  :  +- SubqueryAlias s
+         :  :  :     +- SubqueryAlias sample
+         :  :  :        +- View (`sample`, [token#14,timestamp#15L,prev#16,next#17,scene_token#18])
+         :  :  :           +- Relation [token#14,timestamp#15L,prev#16,next#17,scene_token#18] parquet
+         :  :  +- SubqueryAlias sa
+         :  :     +- SubqueryAlias sample_annotation
+         :  :        +- View (`sample_annotation`, [token#66,sample_token#67,instance_token#68,visibility_token#69,attribute_tokens#70,translation#71,size#72,rotation#73,prev#74,next#75,num_lidar_pts#76,num_radar_pts#77])
+         :  :           +- Relation [token#66,sample_token#67,instance_token#68,visibility_token#69,attribute_tokens#70,translation#71,size#72,rotation#73,prev#74,next#75,num_lidar_pts#76,num_radar_pts#77] parquet
+         :  +- SubqueryAlias i
+         :     +- SubqueryAlias instance
+         :        +- View (`instance`, [token#112,category_token#113,nbr_annotations#114,first_annotation_token#115,last_annotation_token#116])
+         :           +- Relation [token#112,category_token#113,nbr_annotations#114,first_annotation_token#115,last_annotation_token#116] parquet
+         +- SubqueryAlias c
+            +- SubqueryAlias category
+               +- View (`category`, [token#90,name#91,description#92])
+                  +- Relation [token#90,name#91,description#92] parquet
+
+== Optimized Logical Plan ==
+Sort [avg_pedestrians_per_sample#131 DESC NULLS LAST], true
++- Aggregate [name#5], [name#5 AS scene_name#128, count(distinct token#14) AS sample_count#129L, count(token#66) AS pedestrian_annotation_count#130L, round((cast(count(token#66) as double) / cast(count(distinct token#14) as double)), 3) AS avg_pedestrians_per_sample#131]
+   +- Project [name#5, token#14, token#66]
+      +- Join Inner, (token#90 = category_token#113)
+         :- Project [name#5, token#14, token#66, category_token#113]
+         :  +- Join Inner, (token#112 = instance_token#68)
+         :     :- Project [name#5, token#14, token#66, instance_token#68]
+         :     :  +- Join Inner, (sample_token#67 = token#14)
+         :     :     :- Project [name#5, token#14]
+         :     :     :  +- Join Inner, (scene_token#18 = token#0)
+         :     :     :     :- Project [token#0, name#5]
+         :     :     :     :  +- Filter isnotnull(token#0)
+         :     :     :     :     +- Relation [token#0,log_token#1,nbr_samples#2,first_sample_token#3,last_sample_token#4,name#5,description#6] parquet
+         :     :     :     +- Project [token#14, scene_token#18]
+         :     :     :        +- Filter (isnotnull(scene_token#18) AND isnotnull(token#14))
+         :     :     :           +- Relation [token#14,timestamp#15L,prev#16,next#17,scene_token#18] parquet
+         :     :     +- Project [token#66, sample_token#67, instance_token#68]
+         :     :        +- Filter (isnotnull(sample_token#67) AND isnotnull(instance_token#68))
+         :     :           +- Relation [token#66,sample_token#67,instance_token#68,visibility_token#69,attribute_tokens#70,translation#71,size#72,rotation#73,prev#74,next#75,num_lidar_pts#76,num_radar_pts#77] parquet
+         :     +- Project [token#112, category_token#113]
+         :        +- Filter (isnotnull(token#112) AND isnotnull(category_token#113))
+         :           +- Relation [token#112,category_token#113,nbr_annotations#114,first_annotation_token#115,last_annotation_token#116] parquet
+         +- Project [token#90]
+            +- Filter ((isnotnull(name#91) AND StartsWith(name#91, human.pedestrian)) AND isnotnull(token#90))
+               +- Relation [token#90,name#91,description#92] parquet
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Sort [avg_pedestrians_per_sample#131 DESC NULLS LAST], true, 0
+   +- Exchange rangepartitioning(avg_pedestrians_per_sample#131 DESC NULLS LAST, 8), ENSURE_REQUIREMENTS, [plan_id=159]
+      +- HashAggregate(keys=[name#5], functions=[count(token#66), count(distinct token#14)], output=[scene_name#128, sample_count#129L, pedestrian_annotation_count#130L, avg_pedestrians_per_sample#131])
+         +- Exchange hashpartitioning(name#5, 8), ENSURE_REQUIREMENTS, [plan_id=156]
+            +- HashAggregate(keys=[name#5], functions=[merge_count(token#66), partial_count(distinct token#14)], output=[name#5, count#141L, count#144L])
+               +- HashAggregate(keys=[name#5, token#14], functions=[merge_count(token#66)], output=[name#5, token#14, count#141L])
+                  +- Exchange hashpartitioning(name#5, token#14, 8), ENSURE_REQUIREMENTS, [plan_id=152]
+                     +- HashAggregate(keys=[name#5, token#14], functions=[partial_count(token#66)], output=[name#5, token#14, count#141L])
+                        +- Project [name#5, token#14, token#66]
+                           +- BroadcastHashJoin [category_token#113], [token#90], Inner, BuildRight, false
+                              :- Project [name#5, token#14, token#66, category_token#113]
+                              :  +- BroadcastHashJoin [instance_token#68], [token#112], Inner, BuildRight, false
+                              :     :- Project [name#5, token#14, token#66, instance_token#68]
+                              :     :  +- BroadcastHashJoin [token#14], [sample_token#67], Inner, BuildRight, false
+                              :     :     :- Project [name#5, token#14]
+                              :     :     :  +- BroadcastHashJoin [token#0], [scene_token#18], Inner, BuildLeft, false
+                              :     :     :     :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, string, false]),false), [plan_id=135]
+                              :     :     :     :  +- Filter isnotnull(token#0)
+                              :     :     :     :     +- FileScan parquet [token#0,name#5] Batched: true, DataFilters: [isnotnull(token#0)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/yuefan.zhang/Data_juicer/warehouse/bronze_parquet/scene], PartitionFilters: [], PushedFilters: [IsNotNull(token)], ReadSchema: struct<token:string,name:string>
+                              :     :     :     +- Filter (isnotnull(scene_token#18) AND isnotnull(token#14))
+                              :     :     :        +- FileScan parquet [token#14,scene_token#18] Batched: true, DataFilters: [isnotnull(scene_token#18), isnotnull(token#14)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/yuefan.zhang/Data_juicer/warehouse/bronze_parquet/sample], PartitionFilters: [], PushedFilters: [IsNotNull(scene_token), IsNotNull(token)], ReadSchema: struct<token:string,scene_token:string>
+                              :     :     +- BroadcastExchange HashedRelationBroadcastMode(List(input[1, string, false]),false), [plan_id=139]
+                              :     :        +- Filter (isnotnull(sample_token#67) AND isnotnull(instance_token#68))
+                              :     :           +- FileScan parquet [token#66,sample_token#67,instance_token#68] Batched: true, DataFilters: [isnotnull(sample_token#67), isnotnull(instance_token#68)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/yuefan.zhang/Data_juicer/warehouse/bronze_parquet/sample_an..., PartitionFilters: [], PushedFilters: [IsNotNull(sample_token), IsNotNull(instance_token)], ReadSchema: struct<token:string,sample_token:string,instance_token:string>
+                              :     +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, string, false]),false), [plan_id=143]
+                              :        +- Filter (isnotnull(token#112) AND isnotnull(category_token#113))
+                              :           +- FileScan parquet [token#112,category_token#113] Batched: true, DataFilters: [isnotnull(token#112), isnotnull(category_token#113)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/yuefan.zhang/Data_juicer/warehouse/bronze_parquet/instance], PartitionFilters: [], PushedFilters: [IsNotNull(token), IsNotNull(category_token)], ReadSchema: struct<token:string,category_token:string>
+                              +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, string, true]),false), [plan_id=147]
+                                 +- Project [token#90]
+                                    +- Filter ((isnotnull(name#91) AND StartsWith(name#91, human.pedestrian)) AND isnotnull(token#90))
+                                       +- FileScan parquet [token#90,name#91] Batched: true, DataFilters: [isnotnull(name#91), StartsWith(name#91, human.pedestrian), isnotnull(token#90)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/yuefan.zhang/Data_juicer/warehouse/bronze_parquet/category], PartitionFilters: [], PushedFilters: [IsNotNull(name), StringStartsWith(name,human.pedestrian), IsNotNull(token)], ReadSchema: struct<token:string,name:string>
+
