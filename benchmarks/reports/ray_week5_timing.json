@@ -1,0 +1,25 @@
+{
+  "n_clips": 20,
+  "timings": [
+    {
+      "label": "Local (1 proc, fork)",
+      "elapsed_s": 86.53,
+      "videos_per_min": 13.9
+    },
+    {
+      "label": "Ray (num_proc=1)",
+      "elapsed_s": 107.56,
+      "videos_per_min": 11.2
+    },
+    {
+      "label": "Ray (num_proc=2)",
+      "elapsed_s": 107.12,
+      "videos_per_min": 11.2
+    },
+    {
+      "label": "Ray (num_proc=4)",
+      "elapsed_s": 108.37,
+      "videos_per_min": 11.1
+    }
+  ]
+}

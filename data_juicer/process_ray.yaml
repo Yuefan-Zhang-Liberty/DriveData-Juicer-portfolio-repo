@@ -1,0 +1,43 @@
+# Phase 5: Data-Juicer pipeline using Ray executor.
+# One-command run (after: ray start --head):
+#   executor_type: ray + ray_address: auto routes all ops through Ray actors/tasks.
+#
+# Key difference from process_local.yaml:
+#   - auto_op_parallelism: false is NOT needed in Ray mode. Ray executor controls
+#     parallelism via Ray tasks/actors, not Python multiprocessing fork. The psutil
+#     host-level resource issue that requires auto_op_parallelism: false in local mode
+#     does not apply here (see docs/architecture.md).
+#   - MP_START_METHOD=fork is NOT needed. Ray uses actors (spawn-based), not Python
+#     fork, so UNFORKABLE ops work fine without env override.
+#   - num_proc per op controls Ray task concurrency (optional; omit to use Ray default).
+project_name: 'drivedata-juicer-phase5-ray'
+dataset_path: './data_juicer/manifests/gold_manifest_100.jsonl'
+export_path: './data_juicer/outputs/phase5_ray/result.jsonl'
+work_dir: './data_juicer/work_dir/phase5_ray'
+executor_type: ray
+ray_address: auto
+
+open_tracer: true
+trace_num: 5
+
+process:
+  - video_duration_filter:
+      min_duration: 1
+      max_duration: 5
+  - video_aspect_ratio_filter:
+      min_ratio: "1/2"
+      max_ratio: "2/1"
+      any_or_all: any
+  - video_resolution_filter:
+      min_width: 800
+      max_width: 4096
+      min_height: 400
+      max_height: 4096
+      any_or_all: any
+  - video_motion_score_filter:
+      min_score: 0.25
+      sampling_fps: 2
+      any_or_all: any
+  - video_camera_motion_consistency_filter:
+      min_consistency: 0.05
+      any_or_all: any
