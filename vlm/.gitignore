@@ -1,0 +1,5 @@
+models/
+checkpoints/
+results/
+__pycache__/
+*.pyc
