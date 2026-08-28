@@ -6,7 +6,8 @@
 
 ## 状态
 
-项目处于**阶段 3（Data-Juicer 本地 Pipeline）**，2026-08-24 启动，阶段 0/1/2/3 已完成：
+项目处于**阶段 4（新算子 `video_camera_motion_consistency_filter`）**，2026-08-24 启动，阶段 0/1/2/3
+已完成，阶段 4 实现/测试/基线对比/端到端验证已完成（上游 PR 未开，需用户确认后再开）：
 
 - [x] 仓库骨架与目录结构
 - [x] 环境安装步骤验证
@@ -16,7 +17,9 @@
 - [x] Spark：10 个业务 SQL 查询（含窗口函数、四元数角度计算）+ 4 组性能对比实验
 - [x] Spark/Iceberg Bronze-Silver-Gold 数仓（Iceberg 部分）
 - [x] Data-Juicer 本地 Pipeline（Gold Manifest 导出、4 个现有视频算子、20/100/500 三档规模、坏视频跳过、可复现性验证）
-- [ ] `video_camera_motion_consistency_filter` 算子与上游 PR
+- [x] `video_camera_motion_consistency_filter` 算子（Shi-Tomasi + LK 光流 + RANSAC 单应矩阵，15 个单测、
+      与帧差基线的判别力对比、tier-20 端到端联跑）
+- [ ] 上游 PR（实现/测试/文档已就绪，开 PR 前需用户确认）
 - [ ] VLM LoRA/SFT 微调与数据质量归因实验
 
 Phase 1 产出见 [benchmarks/reports/spark_week1.md](benchmarks/reports/spark_week1.md)（查询结果）、
@@ -35,6 +38,14 @@ Phase 3 产出见 [benchmarks/reports/dj_week3.md](benchmarks/reports/dj_week3.m
 `data_juicer/export_gold_manifest.py` 生成：nuScenes mini 仅 10 个场景，通过对每个场景的 CAM_FRONT 帧序列做
 滑动窗口（24 帧窗口、4 帧步长、~83% 重叠）拼出 534 个有重叠的片段以覆盖 500 档规模，报告中明确说明这不是
 534 段独立录制的视频。
+
+Phase 4 产出见 [benchmarks/reports/dj_week4.md](benchmarks/reports/dj_week4.md)：新算子
+`video_camera_motion_consistency_filter`（Shi-Tomasi 角点 + LK 光流 + RANSAC 单应矩阵拟合，
+`camera_motion_consistency = mean_inlier_ratio * motion_smoothness`）、开发中发现并修复的两个
+量化 bug（用单应矩阵自身平移项而非 RANSAC 内点位移作运动信号；未按片段自身速度归一化平滑度）、
+15 个单测、与帧差基线的判别力对比（用能拦住全部合成故障片段所需的阈值反推正常片段的误杀率：
+本算子 33.33% vs. 基线 100.00%，且基线对亮度闪烁/帧乱序完全不敏感）、tier-20 端到端联跑验证
+（含损坏片段跳过、5 个算子全部正常完成，exit 0）。
 
 进度以 [plan.md](plan.md) 中各阶段的完成门槛为准。
 

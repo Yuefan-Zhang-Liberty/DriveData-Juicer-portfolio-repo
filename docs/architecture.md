@@ -21,7 +21,8 @@ JSONL Manifest 导出
         ↓
 Data-Juicer（Local Executor → Ray Executor）
         ↓
-video_camera_motion_consistency_filter（本项目新增算子）+ 现有视频质量/去重/Caption 算子
+video_camera_motion_consistency_filter（本项目新增算子，Phase 4 已实现/测试/验证，见
+benchmarks/reports/dj_week4.md）+ 现有视频质量/去重/Caption 算子
         ↓
 VLM LoRA/QLoRA 微调（结构化驾驶场景 Caption）
         ↓
@@ -71,6 +72,7 @@ Gold 样本字段至少包含：视频路径、天气、时间、自车动作、
 - Iceberg 使用 Hadoop catalog（纯文件系统，无 Hive metastore 进程）—— 无 sudo 环境下无法部署 metastore，且本项目单机运行不需要多引擎共享元数据的场景，Hadoop catalog 已足够展示 snapshot/time travel/schema evolution/partition evolution 等核心机制。见 [benchmarks/reports/iceberg_week2.md](../benchmarks/reports/iceberg_week2.md)。
 - Data-Juicer manifest 中的相对视频路径按 `dataset_path` **所在目录**（即 manifest 文件自身的目录）解析，不是项目根目录或 cwd（`data-juicer/data_juicer/format/formatter.py`）—— `export_gold_manifest.py` 按此约定写相对路径。
 - `av` 必须锁定在 `13.1.0`（与 `data-juicer/pyproject.toml` 自身的锁定版本一致），不能装最新版：更新版本会破坏 `mm_utils.py` 里 `close_video()` 用到的 `VideoCodecContext.close()` API。
+- **所有 dj-process yaml 里每个算子都必须显式写 `auto_op_parallelism: false`，不能漏。** 原因：`auto_op_parallelism` 默认 `True`，为 `True` 时 `num_proc` 由 `calculate_np()`（`data-juicer/data_juicer/utils/process_utils.py`）自动计算——若算子未声明 `memory`/`num_cpus` 需求（多数视频/文本过滤算子都没声明），该函数会退化成 `num_proc = psutil.cpu_count()`；`available_memories()` 同样读 `psutil.virtual_memory()`（`data-juicer/data_juicer/utils/resource_utils.py`）。这两者都是**主机级**资源探测，不感知容器 cgroup 内存上限。本机是 224 核/999GB 的共享服务器，但运行容器通常有几十到上百 GB 的内存上限，若某个 yaml 漏写 `auto_op_parallelism: false`，Data-Juicer 会按主机核数 fork 出上百个并发 cv2 视频解码子进程，足以在容器内触发 OOM Kill（`exit_code=137`，内核直接杀进程，没有 Python traceback）——曾在 `data_juicer/process_local.yaml` 上实际发生过一次（该文件当时缺了这个字段，已修复并补充了行内注释）。新增/修改任何 dj-process 配置前，先确认每个算子都带这个字段。
 - 本机（共享、224 核、多用户训练服务器）上运行 `dj-process` 需要显式设置环境变量 `MP_START_METHOD=fork`。原因：Data-Juicer 对注册在 `UNFORKABLE`（如 `video_motion_score_filter`，用了 cv2）里的算子会强制使用 `forkserver`/`spawn` 起多进程，但这两种方式在本机上都会触发 `multiprocessing.context.AuthenticationError: digest sent was rejected`（推测是与其他用户并发的多进程作业争抢 socket/semaphore 导致，未完全定位，仅做了充分的经验验证）；而普通 `fork` 在本机上对所有算子都稳定可用。已给 `data-juicer/` fork 的 `data_juicer/utils/process_utils.py` 打了一个最小、可选启用的 patch：只有显式设置 `MP_START_METHOD` 时才覆盖 Data-Juicer 强制指定的候选启动方式列表，不设置该环境变量时行为不变。见 [benchmarks/reports/dj_week3.md](../benchmarks/reports/dj_week3.md)。
 
 ## 未决问题

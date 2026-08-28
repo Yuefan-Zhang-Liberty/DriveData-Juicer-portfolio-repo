@@ -1,0 +1,40 @@
+# Phase 4: tier-20 end-to-end smoke test adding video_camera_motion_consistency_filter
+# as a 5th step after Phase 3's 4 existing video ops, over the 20-clip Gold manifest
+# (which includes the deliberately corrupted 0-byte clip). Verifies the new op runs
+# cleanly inside the real dj-process pipeline, not just standalone.
+# One-command run: MP_START_METHOD=fork dj-process --config data_juicer/process_local_phase4_tier20.yaml
+project_name: 'drivedata-juicer-phase4-tier20'
+dataset_path: './data_juicer/manifests/gold_manifest_20.jsonl'
+export_path: './data_juicer/outputs/phase4_tier20/result.jsonl'
+work_dir: './data_juicer/work_dir/phase4_tier20'
+
+open_tracer: true
+trace_num: 5
+
+process:
+  - video_duration_filter:
+      min_duration: 1
+      max_duration: 5
+      auto_op_parallelism: false
+  - video_aspect_ratio_filter:
+      min_ratio: "1/2"
+      max_ratio: "2/1"
+      any_or_all: any
+      auto_op_parallelism: false
+  - video_resolution_filter:
+      min_width: 800
+      max_width: 4096
+      min_height: 400
+      max_height: 4096
+      any_or_all: any
+      auto_op_parallelism: false
+  - video_motion_score_filter:
+      min_score: 0.25
+      sampling_fps: 2
+      any_or_all: any
+      auto_op_parallelism: false
+  - video_camera_motion_consistency_filter:
+      min_consistency: 0.05
+      sampling_fps: 2
+      any_or_all: any
+      auto_op_parallelism: false

@@ -16,21 +16,32 @@ trace_num: 5
 # skip_op_error defaults to true project-wide -- a corrupted video is dropped
 # and logged, not a job-crashing exception (see benchmarks/reports/dj_week3.md).
 
+# auto_op_parallelism: false on every op below -- without it, Data-Juicer's default
+# auto_op_parallelism=True sizes num_proc via calculate_np() using psutil.cpu_count()/
+# psutil.virtual_memory() (data-juicer/data_juicer/utils/resource_utils.py), which read
+# HOST-level resources, not this container's cgroup memory limit. On this shared 224-core
+# host that auto-sizes num_proc up to ~224 concurrent cv2-based video-decode workers,
+# which is enough to OOM-kill a memory-limited container even though no single worker
+# leaks. See docs/architecture.md.
 process:
   - video_duration_filter:
       min_duration: 1
       max_duration: 5
+      auto_op_parallelism: false
   - video_aspect_ratio_filter:
       min_ratio: "1/2"
       max_ratio: "2/1"
       any_or_all: any
+      auto_op_parallelism: false
   - video_resolution_filter:
       min_width: 800
       max_width: 4096
       min_height: 400
       max_height: 4096
       any_or_all: any
+      auto_op_parallelism: false
   - video_motion_score_filter:
       min_score: 0.25
       sampling_fps: 2
       any_or_all: any
+      auto_op_parallelism: false

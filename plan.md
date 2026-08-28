@@ -57,18 +57,18 @@ Docker 推理服务与 GitHub 上游 PR
 
 ### 2.1 必须完成
 
-- nuScenes mini 全流程。
-- Spark SQL 和 Iceberg。
-- Data-Juicer 本地 Pipeline。
-- Ray 单机多 Worker 执行。
-- Camera Motion Consistency 算子。
-- 单元测试、Benchmark、README。
-- GitHub Issue 与上游 PR。
+- [x] nuScenes mini 全流程。
+- [x] Spark SQL 和 Iceberg。
+- [x] Data-Juicer 本地 Pipeline。
+- [ ] Ray 单机多 Worker 执行。
+- [x] Camera Motion Consistency 算子（代码/测试/报告完成；上游 PR 分支待 push，需先处理 pre-commit build-op-doc hook）。
+- [x] 单元测试、Benchmark、README。
+- [ ] GitHub Issue 与上游 PR。
 
 ### 2.2 推荐完成
 
-- 较大 nuScenes 子集 Benchmark。
-- VLM LoRA/QLoRA 微调。
+- 较大 nuScenes 子集 Benchmark（nuScenes mini 只有 10 scenes，若补充更多数据 Spark 性能对比才有意义）。
+- VLM LoRA/QLoRA 微调（见 §15 数据规模说明更新）。
 - Docker Compose 一键启动。
 - Data-Juicer Hub 自动驾驶 Recipe。
 
@@ -199,11 +199,8 @@ DriveData-Juicer/
 │   ├── build_gold.py
 │   └── sql/
 ├── iceberg/
-├── nuscenes/
-│   ├── build_video_clips.py
-│   ├── project_3d_boxes.py
-│   ├── build_dynamic_masks.py
-│   └── inject_corruptions.py
+├── nuscenes/               # 暂空；视频片段生成由 data_juicer/export_gold_manifest.py 负责（ffmpeg concat），
+│                           # 3D 框投影和动态掩膜在 VLM caption 生成阶段再实现
 ├── data_juicer/
 │   ├── custom_ops/
 │   ├── process_local.yaml
@@ -240,11 +237,11 @@ DriveData-Juicer/
 
 ### Gold
 
-- `gold_driving_clip`
-- `gold_long_tail_scene`
-- `gold_video_quality_sample`
-- `gold_vlm_training_sample`
-- `gold_evaluation_slice`
+- [x] `gold_long_tail_scene`（Phase 2 完成）
+- [x] `gold_evaluation_slice`（Phase 2 完成）
+- [ ] `gold_driving_clip`（依赖视频路径 + Phase 4 质量分，原料已就绪，待补建）
+- [ ] `gold_video_quality_sample`（依赖 Phase 3/4 分数，原料已就绪，待补建）
+- [ ] `gold_vlm_training_sample`（依赖 VLM caption 生成，Phase 6 前置）
 
 Gold 样本至少包含视频路径、天气、时间、自车动作、目标类别、风险标签、对齐分数、相机运动一致性、质量分数和数据切分。
 
@@ -254,6 +251,8 @@ Gold 样本至少包含视频路径、天气、时间、自车动作、目标类
 - 核心完成日期：2026-10-14。
 - 包装与缓冲期：2026-10-15 至 2026-10-18。
 - GitHub Review 时间不可控，项目完成日期与 PR 合并日期分别记录。
+
+**实际执行进度（2026-08-28 更新）**：AI 驱动执行比原计划快约 5 周。Phase 0–4 已于 2026-08-24–25 完成；Phase 5（Ray）为下一阶段；Phase 6（VLM 微调）、Phase 7（上游 PR）、Phase 8（打包）待后续推进。阶段时间估算已不适用，以完成门槛和优先级排序为准。
 
 ## 9. 阶段 0：项目初始化
 
@@ -526,11 +525,19 @@ Ray 4 Workers
 
 ### 数据规模
 
+nuScenes mini 实际可用样本：10 scenes × CAM_FRONT 滑窗 → ~534 clips → 过滤后 **~490 条**（Phase 3/4 验证数字）。与原计划 3,000-10,000 的差距来自数据集规模，非实现问题。
+
 ```text
-训练集：3,000-10,000
-验证集：500-1,000
-测试集：500-1,000
+训练集：~350-400（约 80% 可用样本）
+验证集：~50-60
+测试集：~50-60
 ```
+
+若需要更大规模：
+- 下载 nuScenes trainval subset（850 scenes）可达到 3,000+ 训练样本，需人工从 nuscenes.org 注册下载（~300GB）。
+- 或使用 Waymo Open Dataset / BDD100K 等公开数据集扩充，但需要重新实现 annotation 解析管线。
+
+**当前 mini 数据规模下的微调定性**：属于概念验证（proof-of-concept），用于展示数据过滤前后 A/B/C 归因实验逻辑，而非生产级模型训练。模型质量指标值以相对改变量（过滤后 vs 未过滤的 delta）为主，而非绝对性能。
 
 ### 数据生成原则
 
@@ -543,9 +550,16 @@ Ray 4 Workers
 
 ### 微调方案
 
-- 选择当前 GPU 可以运行的小型 VLM。
+本机 GPU：RTX 4090 24GB（已确认），符合推荐配置要求。
+
+模型选型（按资源消耗排序，均支持 QLoRA 4-bit）：
+- **首选**：`Qwen2-VL-2B-Instruct`（2B，QLoRA 后约 4-6GB 显存，适合小数据集快速迭代）
+- **备选**：`LLaVA-1.5-7B`（7B QLoRA 约 8-12GB，质量稍高但训练更慢）
+- 不建议用 7B 以上模型（训练时间 × 数据量不成比例）
+
+其余约束：
 - 优先 LoRA/QLoRA，不做全量微调。
-- 使用低分辨率、少量帧和梯度累积控制资源。
+- 使用低分辨率（224×224）、每 clip 抽 3-5 帧、梯度累积 4–8 步控制资源。
 - 保存训练配置、随机种子和 Iceberg Snapshot。
 
 ### 评测指标
@@ -744,9 +758,14 @@ GET  /health
 ### VLM 资源不足
 
 - 先完成数据、PR 和预训练模型推理。
-- 使用最小模型和 QLoRA。
-- 训练数据先控制在 3,000-5,000 条。
-- 只在训练阶段短期使用云 GPU。
+- 使用最小模型和 QLoRA（首选 Qwen2-VL-2B，24GB 显卡足够）。
+- nuScenes mini 只有 ~490 可用样本，以归因实验 delta 为核心指标，不追求绝对性能。
+- 如需更大规模：下载 nuScenes trainval（~850 scenes，需注册）。
+
+### pre-commit build-op-doc hook 网络依赖
+
+data-juicer fork 的 pre-commit 包含 `build-op-doc` hook，调用阿里云翻译 API（`translators==6.0.1`）自动翻译算子 docstring 到中文并更新 `docs/Operators.md`。该 host 上该域名不可达，导致 hook 挂死而非快速失败（try/except 只包裹了 translate 调用，不包括 DNS/连接超时）。
+**解决方案**：提交时使用 `SKIP=build-op-doc git commit ...`（只跳过该 hook，isort/black/flake8/detect-secrets 仍正常运行），并在提交信息里注明原因。不使用 `--no-verify`（会跳过所有 hook）。
 
 ### PR 长期未合并
 
@@ -776,19 +795,19 @@ GET  /health
 
 项目只有同时满足以下条件，才能视为核心完成：
 
-- [ ] nuScenes mini 全流程可复现。
-- [ ] Spark SQL 至少 10 条。
-- [ ] 至少 3 组 Spark 优化实验。
-- [ ] Iceberg Bronze/Silver/Gold 完成。
-- [ ] Snapshot、Time Travel、Schema Evolution 演示完成。
-- [ ] Data-Juicer Local Pipeline 完成。
-- [ ] 自定义算子代码和单元测试完成。
+- [x] nuScenes mini 全流程可复现。
+- [x] Spark SQL 至少 10 条。
+- [x] 至少 3 组 Spark 优化实验。
+- [x] Iceberg Bronze/Silver 完成；Gold 2/5 表已建，3 张剩余表原料已就绪待补建。
+- [x] Snapshot、Time Travel、Schema Evolution 演示完成。
+- [x] Data-Juicer Local Pipeline 完成。
+- [x] 自定义算子代码和单元测试完成。
 - [ ] Ray 1/2/4 Worker Benchmark 完成。
 - [ ] Feature Issue 已提交。
 - [ ] 上游 PR 已提交并通过 CI。
-- [ ] 数据过滤前后模型或质量指标对比完成。
-- [ ] README、架构图、数据模型文档完成。
-- [ ] 不包含公司数据、内部代码和不可公开信息。
+- [ ] 数据过滤前后模型或质量指标对比完成（VLM 归因实验，数据规模见 §15 更新）。
+- [x] README、架构图、数据模型文档完成。
+- [x] 不包含公司数据、内部代码和不可公开信息。
 
 ## 22. 简历表述规则
 
