@@ -19,6 +19,9 @@ __pycache__/
 /data_juicer/work_dir/
 /data_juicer/outputs/
 
+# downloaded connector jars (re-fetch via the command in flink/streaming_ingest.py's docstring)
+/flink/jars/
+
 # local env / secrets
 .env
 *.pem
